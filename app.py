@@ -1,51 +1,110 @@
 import os
 import streamlit as st
 from langchain_groq import ChatGroq
+from langchain.prompts import ChatPromptTemplate
+from langchain.chains import LLMChain
+from langchain.memory import ConversationBufferMemory
 
-# Load Groq API key from environment variable
-API_KEY = os.environ.get("GROQ_API_KEY")
-if not API_KEY:
-    st.error("Groq API key not found. Please set the environment variable 'GROQ_API_KEY'.")
-    st.stop()
-
-# Instantiate LLM
-llm = ChatGroq(
-    groq_api_key=API_KEY,
-    model_name="llama-3.3-70b-versatile",
-    temperature=0.4
+# Set up Streamlit page configuration for a light, modern look
+st.set_page_config(
+    page_title="Mental Wellness Chatbot",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Streamlit page config
-st.set_page_config(page_title="Light Theme Chatbot", page_icon="💬", layout="centered")
-st.markdown("<h2 style='text-align: center; color: #2C666E;'>💬 Light Theme Chatbot</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #333;'>Professional • Compassionate • Confidential</p>", unsafe_allow_html=True)
-st.markdown("---")
+# Custom CSS for modern light theme
+st.markdown("""
+    <style>
+    body { background-color: #f0f4f8; color: #333333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .stApp > header { background-color: #ffffff; }
+    .css-1lcbmhc { background-color: #ffffff; border-right: 1px solid #e0e0e0; }
+    .st-chat-message { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .st-chat-message.user { background-color: #e3f2fd; color: #1565c0; }
+    .st-chat-message.assistant { background-color: #ffffff; color: #333333; border: 1px solid #e0e0e0; }
+    .stButton > button { background-color: #4caf50; color: white; border: none; border-radius: 8px; padding: 8px 16px; }
+    .stButton > button:hover { background-color: #388e3c; }
+    .st-info { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 12px; border-radius: 8px; }
+    </style>
+""", unsafe_allow_html=True)
 
-# Chat history
-if "history" not in st.session_state:
-    st.session_state.history = []
+# Mental health disclaimer
+st.title("🧠 Mental Wellness Chatbot")
+st.info("""
+**Important Note on Mental Health:**  
+This chatbot provides general support and coping strategies. It is not a substitute for professional advice.  
+Seek help from a qualified professional if needed.  
+Resources:  
+- National Suicide Prevention Lifeline (US): 988  
+- Crisis Text Line: Text HOME to 741741  
+- International help: https://www.befrienders.org
+""")
 
-# Input message
-message = st.text_area("Type your message here...", height=80)
+# Sidebar with predefined prompts
+st.sidebar.title("Quick Start Prompts")
+predefined_prompts = [
+    "I'm feeling anxious about work. What can I do?",
+    "How can I practice mindfulness daily?",
+    "I'm having trouble sleeping. Any tips?",
+    "What are some ways to build self-esteem?",
+    "I feel overwhelmed. Help me prioritize."
+]
 
-# Send button
-if st.button("Send"):
-    if message.strip() != "":
-        try:
-            # Call Groq LLM
-            response = llm.invoke(f"User: {message}\nRespond empathetically and professionally.")
-            bot_reply = response.content.strip()
-        except Exception:
-            bot_reply = "⚠️ Sorry, I encountered an issue. Please try again later."
-        
-        # Save to chat history
-        st.session_state.history.append({"user": message, "bot": bot_reply})
+for prompt in predefined_prompts:
+    if st.sidebar.button(prompt):
+        st.session_state.user_input = prompt
 
-# Display chat
-for chat in st.session_state.history:
-    st.markdown(f"<div style='background-color: #2C666E; color: white; padding: 10px; border-radius: 8px; margin-bottom: 5px;'>You: {chat['user']}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background-color: #DCEAE4; color: black; padding: 10px; border-radius: 8px; margin-bottom: 10px;'>Bot: {chat['bot']}</div>", unsafe_allow_html=True)
+# Load API key from environment variable (from GitHub Secrets)
+groq_api_key = os.environ.get("GROQ_API_KEY")
 
-# Footer note
-st.markdown("---")
-st.markdown("<small><b>Note:</b> This AI is supportive but not a replacement for professional help.</small>", unsafe_allow_html=True)
+if not groq_api_key:
+    st.error("GROQ_API_KEY not found in environment variables. Please set it as a GitHub Secret or deployment environment variable.")
+    st.stop()
+
+# System prompt
+system_prompt = """
+You are a compassionate and supportive mental wellness assistant. Offer practical coping strategies, mindfulness exercises, or general advice. Remind users you are not a licensed therapist. Keep responses positive and empowering.
+"""
+
+# LangChain setup
+llm = ChatGroq(
+    groq_api_key=groq_api_key,
+    model_name="llama-3.3-70b-versatile",
+    temperature=0.7
+)
+
+prompt_template = ChatPromptTemplate.from_messages([
+    ("system", system_prompt),
+    ("human", "{input}")
+])
+
+memory = ConversationBufferMemory(memory_key="chat_history")
+chain = LLMChain(llm=llm, prompt=prompt_template, memory=memory)
+
+# Chat interface
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# User input
+user_input = st.chat_input("How are you feeling today?")
+
+if "user_input" in st.session_state:
+    user_input = st.session_state.user_input
+    del st.session_state.user_input
+
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = chain.run(input=user_input)
+        st.markdown(response)
+    
+    st.session_state.messages.append({"role": "assistant", "content": response})
