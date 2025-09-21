@@ -42,7 +42,7 @@ st.markdown("""
     }
     /* Adjust the layout to accommodate the sticky header */
     .main-content {
-        margin-top: 80px; /* Space for sticky header */
+        margin-top: 100px; /* Ensure content starts below sticky header */
     }
     .css-1lcbmhc {
         background-color: #ffffff;
