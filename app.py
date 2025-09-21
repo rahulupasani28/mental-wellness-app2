@@ -1,110 +1,80 @@
 import os
-import streamlit as st
+import gradio as gr
 from langchain_groq import ChatGroq
-from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
-from langchain.memory import ConversationBufferMemory
 
-# Set up Streamlit page configuration for a light, modern look
-st.set_page_config(
-    page_title="Mental Wellness Chatbot",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Load API key from environment variable
+API_KEY = os.environ.get("GROQ_API_KEY")
 
-# Custom CSS for modern light theme
-st.markdown("""
-    <style>
-    body { background-color: #f0f4f8; color: #333333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .stApp > header { background-color: #ffffff; }
-    .css-1lcbmhc { background-color: #ffffff; border-right: 1px solid #e0e0e0; }
-    .st-chat-message { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    .st-chat-message.user { background-color: #e3f2fd; color: #1565c0; }
-    .st-chat-message.assistant { background-color: #ffffff; color: #333333; border: 1px solid #e0e0e0; }
-    .stButton > button { background-color: #4caf50; color: white; border: none; border-radius: 8px; padding: 8px 16px; }
-    .stButton > button:hover { background-color: #388e3c; }
-    .st-info { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 12px; border-radius: 8px; }
-    </style>
-""", unsafe_allow_html=True)
+if not API_KEY:
+    raise ValueError("Groq API key not found. Please set the environment variable 'GROQ_API_KEY'.")
 
-# Mental health disclaimer
-st.title("🧠 Mental Wellness Chatbot")
-st.info("""
-**Important Note on Mental Health:**  
-This chatbot provides general support and coping strategies. It is not a substitute for professional advice.  
-Seek help from a qualified professional if needed.  
-Resources:  
-- National Suicide Prevention Lifeline (US): 988  
-- Crisis Text Line: Text HOME to 741741  
-- International help: https://www.befrienders.org
-""")
+# Chatbot class
+class LightThemeChatbot:
+    def __init__(self):
+        self.llm = ChatGroq(
+            groq_api_key=API_KEY,
+            model_name="llama-3.3-70b-versatile",
+            temperature=0.4
+        )
 
-# Sidebar with predefined prompts
-st.sidebar.title("Quick Start Prompts")
-predefined_prompts = [
-    "I'm feeling anxious about work. What can I do?",
-    "How can I practice mindfulness daily?",
-    "I'm having trouble sleeping. Any tips?",
-    "What are some ways to build self-esteem?",
-    "I feel overwhelmed. Help me prioritize."
-]
+    def chat(self, message, history):
+        try:
+            response = self.llm.invoke(f"User: {message}\nRespond empathetically and professionally.")
+            return response.content.strip()
+        except Exception as e:
+            return "⚠️ Sorry, I encountered an issue. Please try again later."
 
-for prompt in predefined_prompts:
-    if st.sidebar.button(prompt):
-        st.session_state.user_input = prompt
+# Instantiate chatbot
+bot = LightThemeChatbot()
 
-# Load API key from environment variable (from GitHub Secrets)
-groq_api_key = os.environ.get("GROQ_API_KEY")
+# Create Gradio app
+def create_app():
+    def chat_fn(message, history):
+        return bot.chat(message, history)
 
-if not groq_api_key:
-    st.error("GROQ_API_KEY not found in environment variables. Please set it as a GitHub Secret or deployment environment variable.")
-    st.stop()
+    # Light theme CSS
+    light_css = """
+    body, .gradio-container {
+        background: #ffffff !important;
+        color: #222222 !important;
+    }
+    .main-card {
+        background: #ffffff !important;
+        border: 1px solid #ddd !important;
+        border-radius: 10px !important;
+        padding: 2rem !important;
+    }
+    .chatbot { background: #f9f9f9 !important; }
+    .message.user { background: #2C666E !important; color: #ffffff !important; }
+    .message.bot { background: #DCEAE4 !important; color: #000000 !important; }
+    """
 
-# System prompt
-system_prompt = """
-You are a compassionate and supportive mental wellness assistant. Offer practical coping strategies, mindfulness exercises, or general advice. Remind users you are not a licensed therapist. Keep responses positive and empowering.
-"""
+    with gr.Blocks(theme=gr.themes.Soft(), css=light_css, title="Light Theme Chatbot") as app:
+        with gr.Column(elem_classes="main-card"):
+            gr.Markdown("## 💬 Light Theme Chatbot")
+            gr.Markdown("Professional • Compassionate • Confidential")
 
-# LangChain setup
-llm = ChatGroq(
-    groq_api_key=groq_api_key,
-    model_name="llama-3.3-70b-versatile",
-    temperature=0.7
-)
+            gr.ChatInterface(
+                fn=chat_fn,
+                title="🌟 Share Your Thoughts",
+                description="A simple AI companion in light theme.",
+                examples=[
+                    "I feel anxious about exams.",
+                    "I had a rough day today.",
+                    "I'm feeling better but still a little stressed."
+                ],
+                chatbot=gr.Chatbot(height=450, bubble_full_width=False, render_markdown=True),
+                textbox=gr.Textbox(placeholder="Type your message here...", lines=2),
+                type="messages"
+            )
 
-prompt_template = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    ("human", "{input}")
-])
+            gr.Markdown("---")
+            gr.Markdown(
+                "<small><b>Note:</b> This AI is supportive but not a replacement for professional help.</small>",
+                elem_classes="footer"
+            )
+    return app
 
-memory = ConversationBufferMemory(memory_key="chat_history")
-chain = LLMChain(llm=llm, prompt=prompt_template, memory=memory)
-
-# Chat interface
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# User input
-user_input = st.chat_input("How are you feeling today?")
-
-if "user_input" in st.session_state:
-    user_input = st.session_state.user_input
-    del st.session_state.user_input
-
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
-    
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = chain.run(input=user_input)
-        st.markdown(response)
-    
-    st.session_state.messages.append({"role": "assistant", "content": response})
+# Launch app
+app = create_app()
+app.launch(share=True)
