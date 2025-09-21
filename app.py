@@ -14,22 +14,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a sleek modern theme with a cleaner interface
+# Custom CSS to align the app name/logo on the left side
 st.markdown("""
     <style>
-    body { 
-        background-color: #f7f8fa; 
-        color: #333333; 
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-        padding-top: 20px;
-    }
-    .stApp > header { 
-        background-color: #ffffff; 
+    /* Align app name and symbol to the left */
+    .stApp > header {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 10px 20px;
+        background-color: #ffffff;
         border-bottom: 2px solid #e0e0e0;
     }
-    .css-1lcbmhc { 
-        background-color: #ffffff; 
-        border-right: 1px solid #e0e0e0; 
+    .stApp > header .css-1d391kg {
+        display: none;
+    }
+    .app-header {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin-left: 10px;
+    }
+    .css-1lcbmhc {
+        background-color: #ffffff;
+        border-right: 1px solid #e0e0e0;
     }
     .st-chat-message { 
         border-radius: 12px; 
@@ -125,6 +133,9 @@ prompt_template = ChatPromptTemplate.from_messages([
 
 memory = ConversationBufferMemory(memory_key="chat_history")
 chain = LLMChain(llm=llm, prompt=prompt_template, memory=memory)
+
+# Add app name/logo to the header
+st.markdown('<div class="app-header">🧠 Mental Wellness Chatbot</div>', unsafe_allow_html=True)
 
 # Display a table for national emergency helplines
 emergency_helplines = pd.DataFrame({
