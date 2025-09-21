@@ -1,11 +1,12 @@
 import os
 import streamlit as st
+import pandas as pd
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 
-# Set up Streamlit page configuration for a light, modern look
+# Set up Streamlit page configuration for a modern look
 st.set_page_config(
     page_title="Mental Wellness Chatbot",
     page_icon="🧠",
@@ -13,18 +14,62 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern light theme
+# Custom CSS for a sleek modern theme with a cleaner interface
 st.markdown("""
     <style>
-    body { background-color: #f0f4f8; color: #333333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .stApp > header { background-color: #ffffff; }
-    .css-1lcbmhc { background-color: #ffffff; border-right: 1px solid #e0e0e0; }
-    .st-chat-message { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    .st-chat-message.user { background-color: #e3f2fd; color: #1565c0; }
-    .st-chat-message.assistant { background-color: #ffffff; color: #333333; border: 1px solid #e0e0e0; }
-    .stButton > button { background-color: #4caf50; color: white; border: none; border-radius: 8px; padding: 8px 16px; }
-    .stButton > button:hover { background-color: #388e3c; }
-    .st-info { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 12px; border-radius: 8px; }
+    body { 
+        background-color: #f7f8fa; 
+        color: #333333; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        padding-top: 20px;
+    }
+    .stApp > header { 
+        background-color: #ffffff; 
+        border-bottom: 2px solid #e0e0e0;
+    }
+    .css-1lcbmhc { 
+        background-color: #ffffff; 
+        border-right: 1px solid #e0e0e0; 
+    }
+    .st-chat-message { 
+        border-radius: 12px; 
+        padding: 12px; 
+        margin-bottom: 12px; 
+    }
+    .st-chat-message.user { 
+        background-color: #e3f2fd; 
+        color: #1565c0; 
+    }
+    .st-chat-message.assistant { 
+        background-color: #ffffff; 
+        color: #333333; 
+        border: 1px solid #e0e0e0; 
+    }
+    .stButton > button { 
+        background-color: #4caf50; 
+        color: white; 
+        border: none; 
+        border-radius: 8px; 
+        padding: 8px 16px; 
+    }
+    .stButton > button:hover { 
+        background-color: #388e3c; 
+    }
+    .st-info { 
+        background-color: #e8f5e9; 
+        border-left: 5px solid #4caf50; 
+        padding: 12px; 
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .stMarkdown {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    .table-container {
+        margin-top: 30px;
+        margin-bottom: 30px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,7 +82,7 @@ Seek help from a qualified professional if needed.
 Resources:  
 - National Suicide Prevention Lifeline (US): 988  
 - Crisis Text Line: Text HOME to 741741  
-- International help: https://www.befrienders.org
+- International help: [Befrienders Worldwide](https://www.befrienders.org)
 """)
 
 # Sidebar with predefined prompts
@@ -80,6 +125,28 @@ prompt_template = ChatPromptTemplate.from_messages([
 
 memory = ConversationBufferMemory(memory_key="chat_history")
 chain = LLMChain(llm=llm, prompt=prompt_template, memory=memory)
+
+# Display a table for national emergency helplines
+emergency_helplines = pd.DataFrame({
+    "Country": ["USA", "India", "UK", "Canada", "Australia", "South Africa", "Japan"],
+    "Emergency Helpline": ["911", "112", "999", "911", "000", "10111", "110"]
+})
+
+# Display the table under the main content
+st.markdown("### Emergency Helplines Worldwide")
+st.markdown("""
+    Below are some emergency helplines for countries around the world. In case of an emergency, please don't hesitate to reach out to the appropriate number.
+""")
+
+st.markdown("""
+    <div class="table-container">
+    """, unsafe_allow_html=True)
+
+st.dataframe(emergency_helplines, use_container_width=True)
+
+st.markdown("""
+    </div>
+""", unsafe_allow_html=True)
 
 # Chat interface
 if "messages" not in st.session_state:
