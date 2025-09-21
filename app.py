@@ -1,80 +1,51 @@
 import os
-import gradio as gr
+import streamlit as st
 from langchain_groq import ChatGroq
 
-# Load API key from environment variable
+# Load Groq API key from environment variable
 API_KEY = os.environ.get("GROQ_API_KEY")
-
 if not API_KEY:
-    raise ValueError("Groq API key not found. Please set the environment variable 'GROQ_API_KEY'.")
+    st.error("Groq API key not found. Please set the environment variable 'GROQ_API_KEY'.")
+    st.stop()
 
-# Chatbot class
-class LightThemeChatbot:
-    def __init__(self):
-        self.llm = ChatGroq(
-            groq_api_key=API_KEY,
-            model_name="llama-3.3-70b-versatile",
-            temperature=0.4
-        )
+# Instantiate LLM
+llm = ChatGroq(
+    groq_api_key=API_KEY,
+    model_name="llama-3.3-70b-versatile",
+    temperature=0.4
+)
 
-    def chat(self, message, history):
+# Streamlit page config
+st.set_page_config(page_title="Light Theme Chatbot", page_icon="💬", layout="centered")
+st.markdown("<h2 style='text-align: center; color: #2C666E;'>💬 Light Theme Chatbot</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #333;'>Professional • Compassionate • Confidential</p>", unsafe_allow_html=True)
+st.markdown("---")
+
+# Chat history
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# Input message
+message = st.text_area("Type your message here...", height=80)
+
+# Send button
+if st.button("Send"):
+    if message.strip() != "":
         try:
-            response = self.llm.invoke(f"User: {message}\nRespond empathetically and professionally.")
-            return response.content.strip()
-        except Exception as e:
-            return "⚠️ Sorry, I encountered an issue. Please try again later."
+            # Call Groq LLM
+            response = llm.invoke(f"User: {message}\nRespond empathetically and professionally.")
+            bot_reply = response.content.strip()
+        except Exception:
+            bot_reply = "⚠️ Sorry, I encountered an issue. Please try again later."
+        
+        # Save to chat history
+        st.session_state.history.append({"user": message, "bot": bot_reply})
 
-# Instantiate chatbot
-bot = LightThemeChatbot()
+# Display chat
+for chat in st.session_state.history:
+    st.markdown(f"<div style='background-color: #2C666E; color: white; padding: 10px; border-radius: 8px; margin-bottom: 5px;'>You: {chat['user']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: #DCEAE4; color: black; padding: 10px; border-radius: 8px; margin-bottom: 10px;'>Bot: {chat['bot']}</div>", unsafe_allow_html=True)
 
-# Create Gradio app
-def create_app():
-    def chat_fn(message, history):
-        return bot.chat(message, history)
-
-    # Light theme CSS
-    light_css = """
-    body, .gradio-container {
-        background: #ffffff !important;
-        color: #222222 !important;
-    }
-    .main-card {
-        background: #ffffff !important;
-        border: 1px solid #ddd !important;
-        border-radius: 10px !important;
-        padding: 2rem !important;
-    }
-    .chatbot { background: #f9f9f9 !important; }
-    .message.user { background: #2C666E !important; color: #ffffff !important; }
-    .message.bot { background: #DCEAE4 !important; color: #000000 !important; }
-    """
-
-    with gr.Blocks(theme=gr.themes.Soft(), css=light_css, title="Light Theme Chatbot") as app:
-        with gr.Column(elem_classes="main-card"):
-            gr.Markdown("## 💬 Light Theme Chatbot")
-            gr.Markdown("Professional • Compassionate • Confidential")
-
-            gr.ChatInterface(
-                fn=chat_fn,
-                title="🌟 Share Your Thoughts",
-                description="A simple AI companion in light theme.",
-                examples=[
-                    "I feel anxious about exams.",
-                    "I had a rough day today.",
-                    "I'm feeling better but still a little stressed."
-                ],
-                chatbot=gr.Chatbot(height=450, bubble_full_width=False, render_markdown=True),
-                textbox=gr.Textbox(placeholder="Type your message here...", lines=2),
-                type="messages"
-            )
-
-            gr.Markdown("---")
-            gr.Markdown(
-                "<small><b>Note:</b> This AI is supportive but not a replacement for professional help.</small>",
-                elem_classes="footer"
-            )
-    return app
-
-# Launch app
-app = create_app()
-app.launch(share=True)
+# Footer note
+st.markdown("---")
+st.markdown("<small><b>Note:</b> This AI is supportive but not a replacement for professional help.</small>", unsafe_allow_html=True)
