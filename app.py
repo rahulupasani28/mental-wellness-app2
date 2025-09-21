@@ -14,17 +14,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS to align the app name/logo on the left side
+# Custom CSS to align the app name/logo on the left side and make it stick to the top
 st.markdown("""
     <style>
-    /* Align app name and symbol to the left */
+    /* Make header sticky at the top */
     .stApp > header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
         display: flex;
         justify-content: flex-start;
         align-items: center;
         padding: 10px 20px;
         background-color: #ffffff;
         border-bottom: 2px solid #e0e0e0;
+        z-index: 1000; /* Ensure the header is on top */
     }
     .stApp > header .css-1d391kg {
         display: none;
@@ -34,6 +39,10 @@ st.markdown("""
         font-weight: bold;
         color: #4CAF50;
         margin-left: 10px;
+    }
+    /* Adjust the layout to accommodate the sticky header */
+    .main-content {
+        margin-top: 80px; /* Space for sticky header */
     }
     .css-1lcbmhc {
         background-color: #ffffff;
@@ -137,6 +146,9 @@ chain = LLMChain(llm=llm, prompt=prompt_template, memory=memory)
 # Add app name/logo to the header
 st.markdown('<div class="app-header">🧠 Mental Wellness Chatbot</div>', unsafe_allow_html=True)
 
+# Main content (with margin for sticky header)
+st.markdown('<div class="main-content">', unsafe_allow_html=True)
+
 # Display a table for national emergency helplines
 emergency_helplines = pd.DataFrame({
     "Country": ["USA", "India", "UK", "Canada", "Australia", "South Africa", "Japan"],
@@ -186,3 +198,5 @@ if user_input:
         st.markdown(response)
     
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+st.markdown('</div>', unsafe_allow_html=True)
