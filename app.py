@@ -107,7 +107,7 @@ st.sidebar.title("Quick Start Prompts")
 predefined_prompts = [
     "I'm feeling anxious about work. What can I do?",
     "How can I practice mindfulness daily?",
-    "I'm having trouble sleeping. Any tips?",
+    "Begin the anxiety test and ask me the questions.",
     "What are some ways to build self-esteem?",
     "I feel overwhelmed. Help me prioritize."
 ]
@@ -200,3 +200,4 @@ if user_input:
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 st.markdown('</div>', unsafe_allow_html=True)
+
