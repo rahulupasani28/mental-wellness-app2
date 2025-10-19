@@ -2,8 +2,8 @@ import os
 import streamlit as st
 import pandas as pd
 from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 st.set_page_config(
     page_title="Mental Wellness Chatbot",
@@ -12,12 +12,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""<style>
+st.markdown("""
+<style>
 .stApp > header {position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding: 10px 20px; background-color: #ffffff; border-bottom: 2px solid #e0e0e0; z-index: 1000;}
 .stApp > header .css-1d391kg { display: none; }
 .app-header { font-size: 24px; font-weight: bold; color: #4CAF50; margin-left: 10px; }
 .main-content { margin-top: 100px; }
-.css-1lcbmhc { background-color: #ffffff; border-right: 1px solid #e0e0e0; }
 .st-chat-message { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
 .st-chat-message.user { background-color: #e3f2fd; color: #1565c0; }
 .st-chat-message.assistant { background-color: #ffffff; color: #333333; border: 1px solid #e0e0e0; }
@@ -26,7 +26,8 @@ st.markdown("""<style>
 .st-info { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 12px; border-radius: 8px; font-size: 14px; }
 .stMarkdown { font-size: 16px; line-height: 1.6; }
 .table-container { margin-top: 30px; margin-bottom: 30px; }
-</style>""", unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">🧠 Mental Wellness Chatbot</div>', unsafe_allow_html=True)
 st.title("🧠 Mental Wellness Chatbot")
@@ -71,14 +72,14 @@ llm = ChatGroq(
     temperature=0.7
 )
 
-system_prompt = SystemMessage(content="""
+system_message = SystemMessage(content="""
 You are a compassionate and supportive mental wellness assistant.
 Offer practical coping strategies, mindfulness exercises, or general advice.
 Remind users you are not a licensed therapist. Keep responses positive and empowering.
 """.strip())
 
 prompt_template = ChatPromptTemplate.from_messages([
-    system_prompt,
+    system_message,
     MessagesPlaceholder(variable_name="history"),
     ("human", "{input}")
 ])
@@ -89,7 +90,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "history_msgs" not in st.session_state:
-    st.session_state.history_msgs = [system_prompt]
+    st.session_state.history_msgs = [system_message]
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -101,11 +102,7 @@ if "user_input" in st.session_state:
 else:
     user_input = st.chat_input("How are you feeling today?")
 
-MAX_HISTORY_MESSAGES = 5
-def trim_history(history_list):
-    if len(history_list) <= MAX_HISTORY_MESSAGES:
-        return history_list.copy()
-    return history_list[-MAX_HISTORY_MESSAGES :]
+MAX_HISTORY = 5
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -114,24 +111,23 @@ if user_input:
     st.session_state.history_msgs.append(HumanMessage(content=user_input))
     if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
         sys_msg = st.session_state.history_msgs[0]
-        rest_msgs = st.session_state.history_msgs[1:]
-        rest_msgs = rest_msgs[-MAX_HISTORY_MESSAGES:]
-        history_to_send = [sys_msg] + rest_msgs
+        rest = st.session_state.history_msgs[1:]
+        rest = rest[-MAX_HISTORY:]
+        history_to_send = [sys_msg] + rest
     else:
-        history_to_send = st.session_state.history_msgs[-MAX_HISTORY_MESSAGES:]
+        history_to_send = st.session_state.history_msgs[-MAX_HISTORY:]
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            result = pipeline.invoke({"input": user_input, "history": history_to_send})
-            response_text = str(result) if not isinstance(result, str) else result
-        st.markdown(response_text)
-    st.session_state.messages.append({"role": "assistant", "content": response_text})
-    st.session_state.history_msgs.append(AIMessage(content=response_text))
+            response = pipeline.invoke({"input": user_input, "history": history_to_send})
+            if not isinstance(response, str):
+                response = str(response)
+        st.markdown(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.session_state.history_msgs.append(AIMessage(content=response))
     if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
         sys_msg = st.session_state.history_msgs[0]
-        rest_msgs = st.session_state.history_msgs[1:]
-        rest_msgs = rest_msgs[-MAX_HISTORY_MESSAGES:]
-        st.session_state.history_msgs = [sys_msg] + rest_msgs
+        rest = st.session_state.history_msgs[1:]
+        rest = rest[-MAX_HISTORY:]
+        st.session_state.history_msgs = [sys_msg] + rest
     else:
-        st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY_MESSAGES:]
-
-
+        st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY:]
