@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 from langchain_groq import ChatGroq
-from langchain.schema import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 st.set_page_config(
@@ -131,3 +131,4 @@ if user_input:
         st.session_state.history_msgs = [sys_msg] + rest
     else:
         st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY:]
+
