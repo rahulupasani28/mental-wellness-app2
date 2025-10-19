@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 st.set_page_config(
@@ -32,8 +32,7 @@ st.markdown("""
 st.markdown('<div class="app-header">🧠 Mental Wellness Chatbot</div>', unsafe_allow_html=True)
 st.title("🧠 Mental Wellness Chatbot")
 st.info("""
-**Important Note on Mental Health:**  
-This chatbot provides general support and coping strategies. It is not a substitute for professional advice.  
+**Important Note on Mental Health:** This chatbot provides general support and coping strategies. It is not a substitute for professional advice.  
 Seek help from a qualified professional if needed.  
 Resources:  
 - National Suicide Prevention Lifeline (US): 988  
@@ -50,7 +49,7 @@ predefined_prompts = [
     "I feel overwhelmed. Help me prioritize."
 ]
 for p in predefined_prompts:
-    if st.sidebar.button(p):
+    if st.sidebar.button(p, key=f"prompt_{p}"):
         st.session_state.user_input = p
 
 emergency_helplines = pd.DataFrame({
@@ -90,7 +89,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "history_msgs" not in st.session_state:
-    st.session_state.history_msgs = [system_message]
+    st.session_state.history_msgs: list[BaseMessage] = [system_message]
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -102,34 +101,37 @@ if "user_input" in st.session_state:
 else:
     user_input = st.chat_input("How are you feeling today?")
 
-MAX_HISTORY = 5
+MAX_HISTORY = 5 
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
+        
     st.session_state.history_msgs.append(HumanMessage(content=user_input))
-    if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
-        sys_msg = st.session_state.history_msgs[0]
-        rest = st.session_state.history_msgs[1:]
-        rest = rest[-MAX_HISTORY:]
-        history_to_send = [sys_msg] + rest
-    else:
-        history_to_send = st.session_state.history_msgs[-MAX_HISTORY:]
+    
+    history_rest = st.session_state.history_msgs[1:] 
+    history_to_send = [system_message] + history_rest[-MAX_HISTORY*2:]
+
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = pipeline.invoke({"input": user_input, "history": history_to_send})
-            if not isinstance(response, str):
-                response = str(response)
-        st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    st.session_state.history_msgs.append(AIMessage(content=response))
+            response_obj = pipeline.invoke({"input": user_input, "history": history_to_send})
+            
+            if isinstance(response_obj, BaseMessage):
+                assistant_response_content = response_obj.content
+            else:
+                assistant_response_content = str(response_obj)
+
+            st.markdown(assistant_response_content)
+    
+    st.session_state.messages.append({"role": "assistant", "content": assistant_response_content})
+    
+    st.session_state.history_msgs.append(response_obj)
+    
     if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
         sys_msg = st.session_state.history_msgs[0]
         rest = st.session_state.history_msgs[1:]
-        rest = rest[-MAX_HISTORY:]
+        rest = rest[-MAX_HISTORY * 2:] 
         st.session_state.history_msgs = [sys_msg] + rest
     else:
-        st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY:]
-
-
+        st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY * 2:]
