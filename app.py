@@ -58,7 +58,6 @@ emergency_helplines = pd.DataFrame({
 })
 st.markdown("### Emergency Helplines Worldwide")
 st.markdown("Below are some emergency helplines for countries around the world. In case of an emergency, please don't hesitate to reach out to the appropriate number.")
-# FIX APPLIED HERE: Replaced use_container_width=True with width='stretch'
 st.dataframe(emergency_helplines, width='stretch')
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -96,15 +95,13 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-user_input = None
-sidebar_input_used = False
+user_input = st.chat_input("How are you feeling today?")
 
-if "user_input" in st.session_state:
+sidebar_input_used = False
+if user_input is None and "user_input" in st.session_state:
     user_input = st.session_state.user_input
     sidebar_input_used = True
-elif input_from_chat := st.chat_input("How are you feeling today?"):
-    user_input = input_from_chat
-
+    
 MAX_HISTORY = 5 
 
 if user_input:
@@ -129,7 +126,6 @@ if user_input:
             st.markdown(assistant_response_content)
     
     st.session_state.messages.append({"role": "assistant", "content": assistant_response_content})
-    
     st.session_state.history_msgs.append(response_obj)
     
     if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
