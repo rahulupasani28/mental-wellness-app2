@@ -58,7 +58,8 @@ emergency_helplines = pd.DataFrame({
 })
 st.markdown("### Emergency Helplines Worldwide")
 st.markdown("Below are some emergency helplines for countries around the world. In case of an emergency, please don't hesitate to reach out to the appropriate number.")
-st.dataframe(emergency_helplines, use_container_width=True)
+# FIX APPLIED HERE: Replaced use_container_width=True with width='stretch'
+st.dataframe(emergency_helplines, width='stretch')
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 if not groq_api_key:
@@ -95,7 +96,6 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- START OF FIX: Handle input from button or chat_input ---
 user_input = None
 sidebar_input_used = False
 
@@ -104,7 +104,6 @@ if "user_input" in st.session_state:
     sidebar_input_used = True
 elif input_from_chat := st.chat_input("How are you feeling today?"):
     user_input = input_from_chat
-# --- END OF FIX ---
 
 MAX_HISTORY = 5 
 
@@ -141,6 +140,5 @@ if user_input:
     else:
         st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY * 2:]
     
-    # --- CRITICAL CLEANUP: Delete sidebar input flag after processing ---
     if sidebar_input_used:
         del st.session_state.user_input
