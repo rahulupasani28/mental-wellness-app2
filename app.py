@@ -1,49 +1,135 @@
+import os
 import streamlit as st
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+import pandas as pd
 from langchain_groq import ChatGroq
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.schema import SystemMessage, HumanMessage, AIMessage
 
-st.title("Mental Wellness Chatbot")
-
-if "store" not in st.session_state:
-    st.session_state.store = {}
-
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in st.session_state.store:
-        st.session_state.store[session_id] = ChatMessageHistory()
-    messages = st.session_state.store[session_id].messages[-10:]  
-    st.session_state.store[session_id].messages = messages
-    return st.session_state.store[session_id]
-
-model = ChatGroq(
-    groq_api_key="YOUR_GROQ_KEY",
-    model_name="llama-3.3-70b-versatile",
-    temperature=0.6
+st.set_page_config(
+    page_title="Mental Wellness Chatbot",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a supportive mental wellness chatbot."),
-    MessagesPlaceholder("history"),
+st.markdown("""<style>
+.stApp > header {position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding: 10px 20px; background-color: #ffffff; border-bottom: 2px solid #e0e0e0; z-index: 1000;}
+.stApp > header .css-1d391kg { display: none; }
+.app-header { font-size: 24px; font-weight: bold; color: #4CAF50; margin-left: 10px; }
+.main-content { margin-top: 100px; }
+.css-1lcbmhc { background-color: #ffffff; border-right: 1px solid #e0e0e0; }
+.st-chat-message { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.st-chat-message.user { background-color: #e3f2fd; color: #1565c0; }
+.st-chat-message.assistant { background-color: #ffffff; color: #333333; border: 1px solid #e0e0e0; }
+.stButton > button { background-color: #4caf50; color: white; border: none; border-radius: 8px; padding: 8px 16px; }
+.stButton > button:hover { background-color: #388e3c; }
+.st-info { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 12px; border-radius: 8px; font-size: 14px; }
+.stMarkdown { font-size: 16px; line-height: 1.6; }
+.table-container { margin-top: 30px; margin-bottom: 30px; }
+</style>""", unsafe_allow_html=True)
+
+st.markdown('<div class="app-header">🧠 Mental Wellness Chatbot</div>', unsafe_allow_html=True)
+st.title("🧠 Mental Wellness Chatbot")
+st.info("""
+**Important Note on Mental Health:**  
+This chatbot provides general support and coping strategies. It is not a substitute for professional advice.  
+Seek help from a qualified professional if needed.  
+Resources:  
+- National Suicide Prevention Lifeline (US): 988  
+- Crisis Text Line: Text HOME to 741741  
+- International help: [Befrienders Worldwide](https://www.befrienders.org)
+""")
+
+st.sidebar.title("Quick Start Prompts")
+predefined_prompts = [
+    "I'm feeling anxious about work. What can I do?",
+    "How can I practice mindfulness daily?",
+    "Begin the anxiety test and ask me the questions.",
+    "What are some ways to build self-esteem?",
+    "I feel overwhelmed. Help me prioritize."
+]
+for p in predefined_prompts:
+    if st.sidebar.button(p):
+        st.session_state.user_input = p
+
+emergency_helplines = pd.DataFrame({
+    "Country": ["USA", "India", "UK", "Canada", "Australia", "South Africa", "Japan"],
+    "Emergency Helpline": ["911", "112", "999", "911", "000", "10111", "110"]
+})
+st.markdown("### Emergency Helplines Worldwide")
+st.markdown("Below are some emergency helplines for countries around the world. In case of an emergency, please don't hesitate to reach out to the appropriate number.")
+st.dataframe(emergency_helplines, use_container_width=True)
+
+groq_api_key = os.environ.get("GROQ_API_KEY")
+if not groq_api_key:
+    st.error("GROQ_API_KEY not found in environment variables.")
+    st.stop()
+
+llm = ChatGroq(
+    groq_api_key=groq_api_key,
+    model_name="llama-3.3-70b-versatile",
+    temperature=0.7
+)
+
+system_prompt = SystemMessage(content="""
+You are a compassionate and supportive mental wellness assistant.
+Offer practical coping strategies, mindfulness exercises, or general advice.
+Remind users you are not a licensed therapist. Keep responses positive and empowering.
+""".strip())
+
+prompt_template = ChatPromptTemplate.from_messages([
+    system_prompt,
+    MessagesPlaceholder(variable_name="history"),
     ("human", "{input}")
 ])
 
-chain = prompt | model | StrOutputParser()
+pipeline = prompt_template | llm
 
-chain_with_history = RunnableWithMessageHistory(
-    chain,
-    get_session_history,
-    input_messages_key="input",
-    history_messages_key="history",
-)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-user_input = st.text_input("How can I help you today?")
+if "history_msgs" not in st.session_state:
+    st.session_state.history_msgs = [system_prompt]
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+if "user_input" in st.session_state:
+    user_input = st.session_state.user_input
+    del st.session_state.user_input
+else:
+    user_input = st.chat_input("How are you feeling today?")
+
+MAX_HISTORY_MESSAGES = 5
+def trim_history(history_list):
+    if len(history_list) <= MAX_HISTORY_MESSAGES:
+        return history_list.copy()
+    return history_list[-MAX_HISTORY_MESSAGES :]
 
 if user_input:
-    response = chain_with_history.invoke(
-        {"input": user_input},
-        config={"configurable": {"session_id": "user-session"}}
-    )
-    st.write(response)
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    st.session_state.history_msgs.append(HumanMessage(content=user_input))
+    if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
+        sys_msg = st.session_state.history_msgs[0]
+        rest_msgs = st.session_state.history_msgs[1:]
+        rest_msgs = rest_msgs[-MAX_HISTORY_MESSAGES:]
+        history_to_send = [sys_msg] + rest_msgs
+    else:
+        history_to_send = st.session_state.history_msgs[-MAX_HISTORY_MESSAGES:]
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            result = pipeline.invoke({"input": user_input, "history": history_to_send})
+            response_text = str(result) if not isinstance(result, str) else result
+        st.markdown(response_text)
+    st.session_state.messages.append({"role": "assistant", "content": response_text})
+    st.session_state.history_msgs.append(AIMessage(content=response_text))
+    if st.session_state.history_msgs and isinstance(st.session_state.history_msgs[0], SystemMessage):
+        sys_msg = st.session_state.history_msgs[0]
+        rest_msgs = st.session_state.history_msgs[1:]
+        rest_msgs = rest_msgs[-MAX_HISTORY_MESSAGES:]
+        st.session_state.history_msgs = [sys_msg] + rest_msgs
+    else:
+        st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY_MESSAGES:]
