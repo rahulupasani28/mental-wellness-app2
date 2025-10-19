@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.schema import SystemMessage, HumanMessage, AIMessage
+from langchain_core.schema.messages import SystemMessage, HumanMessage, AIMessage
 
 st.set_page_config(
     page_title="Mental Wellness Chatbot",
@@ -133,3 +133,4 @@ if user_input:
         st.session_state.history_msgs = [sys_msg] + rest_msgs
     else:
         st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY_MESSAGES:]
+
