@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 from langchain_groq import ChatGroq
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 
@@ -200,4 +200,5 @@ if user_input:
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 st.markdown('</div>', unsafe_allow_html=True)
+
 
