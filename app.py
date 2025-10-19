@@ -95,11 +95,16 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+# --- START OF FIX: Handle input from button or chat_input ---
+user_input = None
+sidebar_input_used = False
+
 if "user_input" in st.session_state:
     user_input = st.session_state.user_input
-    del st.session_state.user_input
-else:
-    user_input = st.chat_input("How are you feeling today?")
+    sidebar_input_used = True
+elif input_from_chat := st.chat_input("How are you feeling today?"):
+    user_input = input_from_chat
+# --- END OF FIX ---
 
 MAX_HISTORY = 5 
 
@@ -135,3 +140,7 @@ if user_input:
         st.session_state.history_msgs = [sys_msg] + rest
     else:
         st.session_state.history_msgs = st.session_state.history_msgs[-MAX_HISTORY * 2:]
+    
+    # --- CRITICAL CLEANUP: Delete sidebar input flag after processing ---
+    if sidebar_input_used:
+        del st.session_state.user_input
